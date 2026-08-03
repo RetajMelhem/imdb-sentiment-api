@@ -211,7 +211,7 @@ python scripts/smoke_test.py
 Python 3.11–3.13 is supported. Clone the repository and enter its root:
 
 ```bash
-git clone https://github.com/<your-username>/imdb-sentiment-api.git
+git clone https://github.com/RetajMelhem/imdb-sentiment-api.git
 cd imdb-sentiment-api
 ```
 
@@ -239,8 +239,9 @@ cp .env.example .env
 In PowerShell, use `Copy-Item .env.example .env`.
 
 ```dotenv
-MODEL_PATH=./model
-# MODEL_ID=your-hf-username/imdb-deberta-v3-base-sentiment
+# MODEL_PATH=./model
+MODEL_ID=retaj249/imdb-deberta-v3-sentiment
+HF_REVISION=0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e
 DEVICE=auto
 ```
 
@@ -356,14 +357,13 @@ docker build -t imdb-sentiment-api:cuda \
 Run that image with the NVIDIA Container Toolkit and `--gpus all`; the same
 `DEVICE=auto` logic will then select CUDA.
 
-For a private or public Hub artifact, omit the local mount and pass the
-fine-tuned repository ID (plus `HF_TOKEN` at runtime only when the repository is
-private):
+For the published public Hub artifact, omit the local mount and pass the
+fine-tuned repository ID with its verified immutable revision:
 
 ```bash
 docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MODEL_ID=your-hf-username/imdb-deberta-v3-base-sentiment \
-  -e HF_REVISION=<40-character-commit-sha> \
+  -e MODEL_ID=retaj249/imdb-deberta-v3-sentiment \
+  -e HF_REVISION=0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e \
   -v hf-cache:/home/app/.cache/huggingface \
   imdb-sentiment-api
 ```
@@ -382,8 +382,10 @@ the service behind managed ingress that provides TLS, authentication where
 appropriate, and per-client rate limits/quotas. The in-process semaphore is
 backpressure, not a substitute for ingress abuse controls.
 
-To use the Hub with Compose, set `MODEL_PATH=`, `MODEL_ID=...`, and the
-immutable `HF_REVISION=...` commit SHA in `.env`.
+The provided Compose file intentionally defaults to the local `./model` mount.
+Use the `docker run` command above for the published Hub artifact, or provide a
+Compose override that removes the local model volume and sets `MODEL_PATH` to an
+empty container value alongside `MODEL_ID` and the immutable `HF_REVISION`.
 
 ## Tests and quality gates
 
@@ -431,26 +433,29 @@ python demo/app.py
 The demo imports `SentimentPredictor`; it does not duplicate preprocessing,
 thresholding, or inference behavior.
 
-## Publish to Hugging Face Hub
+## Hugging Face model
 
-After parity and smoke checks, create a model repository and upload the contents
-of the export directory:
+The verified production artifacts are published at
+[`retaj249/imdb-deberta-v3-sentiment`](https://huggingface.co/retaj249/imdb-deberta-v3-sentiment).
+Production deployments pin the immutable revision
+`0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e`, rather than mutable `main`.
 
-```bash
-python -m pip install --upgrade huggingface_hub
-hf auth login
-hf upload your-hf-username/imdb-deberta-v3-base-sentiment ./model .
-python -c "from huggingface_hub import HfApi; print(HfApi().model_info('your-hf-username/imdb-deberta-v3-base-sentiment').sha)"
+The pinned Hub snapshot was downloaded and loaded through `SentimentPredictor`
+on CPU. Positive, negative, and genuine batch predictions matched the local
+production export exactly; the maximum observed probability difference was
+`0.0`.
+
+To repeat the Hub smoke test, make sure `MODEL_PATH` is unset, then configure:
+
+```dotenv
+MODEL_ID=retaj249/imdb-deberta-v3-sentiment
+HF_REVISION=0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e
+DEVICE=cpu
 ```
 
-`hf upload` creates the model repository when needed; add `--private` if the
-artifact should not be public.
-
-Do not upload notebook/Drive paths or secrets. The Hub repository must include
-the trained weights, tokenizer files, model config, and exported metadata. Test
-the published artifact by clearing `MODEL_PATH`, setting `MODEL_ID` and the
-printed immutable `HF_REVISION`, and running the smoke test again. Production
-loading is safetensors-only and disables remote code execution.
+Run `python scripts/smoke_test.py`. Public downloads require no Hugging Face
+token. Production loading is safetensors-only and disables remote code
+execution. Model weights remain intentionally excluded from this Git repository.
 
 ## Production design decisions
 
