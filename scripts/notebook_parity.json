@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source": "Notebook examples plus microsoft/deberta-v3-base tokenizer files",
+  "examples": [
+    {
+      "text": "This film was thoughtful, beautifully acted, and genuinely moving.",
+      "input_ids": [1, 329, 933, 284, 9939, 261, 5660, 8736, 261, 263, 8574, 1458, 260, 2],
+      "positive_probability": 0.995433
+    },
+    {
+      "text": "A tedious mess with terrible dialogue; I regretted watching it.",
+      "input_ids": [1, 336, 17706, 5049, 275, 4838, 5622, 346, 273, 32902, 2106, 278, 260, 2],
+      "positive_probability": 0.00139
+    }
+  ]
+}

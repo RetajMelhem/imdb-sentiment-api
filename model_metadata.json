@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "task": "sentiment-analysis",
+  "dataset": "IMDB",
+  "base_model": "microsoft/deberta-v3-base",
+  "model_selection": {
+    "candidates_screened": 5,
+    "selected_run": "single_seed_42",
+    "seed": 42,
+    "ensemble_weights": [1.0],
+    "use_tta": false
+  },
+  "train_config": {
+    "learning_rate": 0.000016913198431430903,
+    "num_train_epochs": 3,
+    "effective_batch_size": 32,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.05,
+    "lr_scheduler_type": "cosine",
+    "classifier_dropout": 0.2,
+    "max_grad_norm": 1.0,
+    "use_llrd": false
+  },
+  "tokenizer": {
+    "source": "exported fine-tuned checkpoint",
+    "use_fast": false
+  },
+  "num_labels": 2,
+  "id2label": {
+    "0": "negative",
+    "1": "positive"
+  },
+  "label2id": {
+    "negative": 0,
+    "positive": 1
+  },
+  "positive_class_id": 1,
+  "preprocessing": "minimal_normalize_v1",
+  "truncation_strategy": "head_tail",
+  "max_length": 384,
+  "padding": "dynamic",
+  "pad_to_multiple_of": 8,
+  "decision_threshold": 0.477,
+  "inference_batch_size": 8,
+  "probability_function": "softmax_float32",
+  "validation_metrics": {
+    "accuracy": 0.9556630390971382,
+    "f1": 0.9562101910828026,
+    "threshold": 0.477
+  },
+  "final_seed_validation_metrics": {
+    "accuracy": 0.954453849254333,
+    "precision": 0.948535233570863,
+    "recall": 0.9614767255216693,
+    "f1": 0.9549621363092866,
+    "macro_f1": 0.954448047363775,
+    "log_loss": 0.16217701312185426,
+    "roc_auc": 0.990061801002073,
+    "best_epoch": 2.0
+  },
+  "test_metrics": {
+    "accuracy": 0.96088,
+    "precision": 0.9507119386637459,
+    "recall": 0.97216,
+    "f1": 0.9613163515544656,
+    "macro_f1": 0.9608750218003739,
+    "roc_auc": 0.992435184,
+    "log_loss": 0.1306040386149452,
+    "confusion_matrix": [
+      [11870, 630],
+      [348, 12152]
+    ],
+    "examples": 25000
+  },
+  "frozen_config_fingerprint": "db302e66a1def80c7493849f7bc10abe64db0a2073d8dc9fa37efc6f4ae0cabf",
+  "artifact_provenance": {
+    "run_fingerprint": "aa9b5ed91723e614419119d81578ff5f4c837322f7bfe9a5ddc8b37a7c6dbe8e",
+    "config_sha256": "2cb2f01576072d94ecc9445c48b1de53cd2fc556a444c1a0f3e5086318b95d62",
+    "model_sha256": "e84d203742335db3bef1e7ff1e4b04aeb5cf4811b06e132a10fd96a1ab747ddd",
+    "tokenizer_spm_sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd",
+    "validation_predictions_sha256": "c0d78a423c518b84cdb2e0e2a54350cab8e5aa2b85374150d1044a150f4d68ef",
+    "training_runtime": {
+      "torch": "2.11.0+cu128",
+      "transformers": "4.57.3",
+      "sentencepiece": "0.2.2"
+    }
+  }
+}

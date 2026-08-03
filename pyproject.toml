@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "imdb-sentiment-api"
+version = "1.0.0"
+description = "Production FastAPI service for a fine-tuned IMDB Transformer classifier"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Retaj" }]
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "huggingface-hub>=1.5,<2.0",
+  "numpy>=2.0,<3.0",
+  "pydantic>=2.10,<3.0",
+  "pydantic-settings>=2.7,<3.0",
+  "protobuf>=5,<7",
+  "sentencepiece>=0.2,<0.3",
+  "torch>=2.6,<3.0",
+  "transformers>=5.5,<6.0",
+  "uvicorn[standard]>=0.34,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1.0",
+  "pytest>=9.0.3,<10.0",
+  "pytest-cov>=6.0,<7.0",
+  "pip-audit>=2.9,<3.0",
+  "ruff>=0.9,<1.0",
+]
+demo = ["gradio>=5.12,<6.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sentiment", "app"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "integration: requires exported fine-tuned model artifacts",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["sentiment", "app"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
