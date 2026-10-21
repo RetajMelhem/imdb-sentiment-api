@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "imdb-sentiment-api"
-version = "1.0.0"
+version = "1.1.0"
 description = "Production FastAPI service for a fine-tuned IMDB Transformer classifier"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

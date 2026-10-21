@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repo_id": "retaj249/imdb-deberta-v3-sentiment",
+  "revision": "0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e",
+  "files": {
+    "README.md": {
+      "size": 4927,
+      "sha256": "b4684f18a6ee5d98535eaf20e38ea5edd61ebe192b28360145a5143fbd88a8fd"
+    },
+    "added_tokens.json": {
+      "size": 23,
+      "sha256": "dc046d04c9b0ada7ae6f1dc89c465801799acdf0c9a6aab8c15a1b2d5ca4e91f"
+    },
+    "config.json": {
+      "size": 1028,
+      "sha256": "2cb2f01576072d94ecc9445c48b1de53cd2fc556a444c1a0f3e5086318b95d62"
+    },
+    "model.safetensors": {
+      "size": 737719272,
+      "sha256": "e84d203742335db3bef1e7ff1e4b04aeb5cf4811b06e132a10fd96a1ab747ddd"
+    },
+    "model_metadata.json": {
+      "size": 2584,
+      "sha256": "b1ed9bd9ea31f717eebf74eef50cb51e1ce55fc6ebbaf4ae2251f2660f52c74d"
+    },
+    "special_tokens_map.json": {
+      "size": 286,
+      "sha256": "9463f61e1b109a8eb4688b829260d7c6b1e6dff04c98ff7269bb89e2b92369b9"
+    },
+    "spm.model": {
+      "size": 2464616,
+      "sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"
+    },
+    "tokenizer.json": {
+      "size": 8339875,
+      "sha256": "2c070ff353c36f85e20919da787a30e1e8e52b626d0e026e044f373378f6d0bf"
+    },
+    "tokenizer_config.json": {
+      "size": 1315,
+      "sha256": "e6c4c771911c211618a2d46488dc7e9e499f051773cd4ff4faeca6fe55fdf569"
+    }
+  }
+}

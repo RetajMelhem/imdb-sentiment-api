@@ -58,7 +58,7 @@ def create_app(
 
     application = FastAPI(
         title="Production-Ready Transformer Sentiment Analysis",
-        version="1.0.0",
+        version="1.1.0",
         description="Fine-tuned DeBERTa sentiment inference for IMDB reviews.",
         lifespan=lifespan,
     )

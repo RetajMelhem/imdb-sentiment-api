@@ -20,7 +20,8 @@ venv/
 .cache/
 .huggingface/
 hf-cache/
-model/
+model/*
+!model/manifest.json
 models/
 checkpoints/
 best_model_*/

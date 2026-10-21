@@ -6,10 +6,39 @@ Transformer's preprocessing and decision rule while separating research code,
 model artifacts, and production serving.
 
 > [!IMPORTANT]
-> Fine-tuned weights are intentionally **excluded from Git**. A recovered
-> seed-42 checkpoint has been exported and validated locally in `./model`, which
-> is gitignored. The public `microsoft/deberta-v3-base` checkpoint contains no
-> trained project classification head and is never used as a serving fallback.
+> The fine-tuned model is bundled into the Docker image. Its immutable source,
+> filenames, sizes, and SHA-256 hashes are tracked in
+> [`model/manifest.json`](model/manifest.json). Large weights stay out of Git.
+> Docker downloads and verifies the complete snapshot during the first build;
+> subsequent container starts use the bundled files offline.
+
+## Run with one command (PowerShell or CMD)
+
+Install and start Docker Desktop with Linux containers. Download this repository
+or clone it, then open PowerShell or CMD in its root folder:
+
+```console
+git clone https://github.com/RetajMelhem/imdb-sentiment-api.git
+cd imdb-sentiment-api
+```
+
+Start the API, including the real fine-tuned model:
+
+```console
+docker compose up --build -d --wait
+```
+
+Open **<http://localhost:8080/docs>** to enter reviews and try predictions.
+The first build needs internet access for Python packages and about 749 MB of
+model files. Allow several minutes and at least 4 GB of available Docker memory
+plus several GB of disk space. No host Python, GPU, Hugging Face token, `.env`
+file, or separately downloaded model folder is needed. Runtime inference uses
+CPU and local model files. See [Docker](#docker) for checks and image sharing.
+
+For the Windows release ZIP, extract the complete bundle and run `start.cmd`
+from CMD or `.\start.cmd` from PowerShell. The launcher imports the included
+Docker image, starts the API, and waits for health. This path also works offline
+after downloading the release. See [release notes](RELEASE_NOTES.md).
 
 ## Highlights
 
@@ -136,13 +165,29 @@ imdb-sentiment-api/
 ├── scripts/                # Export, parity, and production smoke checks
 ├── src/sentiment/          # Config, preprocessing, predictor, schemas, metadata
 ├── tests/                  # Lightweight unit and API tests; no model download
+├── model/manifest.json     # Pinned model source and per-file SHA-256 hashes
 ├── model_metadata.json     # Audited inference contract and reported metrics
 ├── Dockerfile
 ├── docker-compose.yml
 └── pyproject.toml
 ```
 
-## Model artifact: required first step
+## Model artifact (Python development and training)
+
+Docker prepares its own model during the build. To import the same snapshot
+into `./model` for Python development, run:
+
+```console
+python scripts/download_model.py
+```
+
+This uses only Python 3.11+ and resumes by skipping files with matching hashes.
+The manifest remains tracked in Git; downloaded files are ignored. Verify an
+existing copy without downloading anything:
+
+```console
+python scripts/download_model.py --verify-only
+```
 
 ### Export the notebook checkpoint
 
@@ -151,7 +196,7 @@ notebook. It must contain a trained sequence-classification model and its
 tokenizer, not merely the Hugging Face base-model cache.
 
 ```bash
-python scripts/export_model.py --source <checkpoint> --output model
+python scripts/export_model.py --source <checkpoint> --output models/custom
 ```
 
 To choose the metadata file explicitly, or replace a previously exported
@@ -160,13 +205,16 @@ directory after reviewing the target, use:
 ```bash
 python scripts/export_model.py \
   --source <checkpoint> \
-  --output model \
+  --output models/custom \
   --metadata model_metadata.json \
   --force
 ```
 
 The export writes standard `save_pretrained` artifacts and carries the serving
-metadata with them. Large weights and `model/` are gitignored.
+metadata with them. Large weights are gitignored; `model/manifest.json` is tracked.
+Export custom checkpoints to a different directory to preserve the pinned
+production snapshot in `model/`. For a custom export, pass
+`--model-path models/custom` to the parity check below.
 
 ### Verify export parity
 
@@ -331,61 +379,86 @@ preserve the audited notebook contract.
 
 ## Docker
 
-The image uses the official Python 3.12 slim base, runs as an unprivileged user,
-and leaves the Hugging Face cache configurable and writable.
+The image contains the verified model and manifest at `/opt/model`. It runs as
+an unprivileged user, and Compose uses a read-only filesystem with no model
+mounts or cache volumes. Hugging Face and Transformers use offline mode at
+runtime. During the build, Docker downloads the pinned public Hub snapshot and
+checks every file's size and SHA-256.
+The Python base image is pinned by digest, and runtime Python dependencies are
+pinned in `requirements-docker.txt`; PyTorch uses the explicit official CPU wheel.
 
-Build and run with a local export:
+These commands work in both **PowerShell and CMD**, from the repository root:
 
-```bash
-docker build -t imdb-sentiment-api .
-docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MODEL_PATH=/model \
-  -v "${PWD}/model:/model:ro" \
-  imdb-sentiment-api
+```console
+docker compose up --build -d --wait
+docker compose ps
+curl.exe http://localhost:8080/health
+docker compose logs --tail 50 api
 ```
 
-The default image installs the official CPU-only PyTorch wheel to keep the
-image practical. To build a CUDA-enabled image, explicitly select the desired
-official PyTorch wheel index/version for the deployment GPU, for example:
+Use <http://localhost:8080/docs> to test single and batch predictions in a
+browser. To predict directly in PowerShell:
 
-```bash
-docker build -t imdb-sentiment-api:cuda \
-  --build-arg TORCH_INDEX_URL=https://pypi.org/simple \
-  --build-arg TORCH_VERSION=2.13.0 .
+```powershell
+Invoke-RestMethod -Uri http://localhost:8080/predict -Method Post -ContentType application/json -Body '{"text":"A thoughtful, beautifully acted film."}'
 ```
 
-Run that image with the NVIDIA Container Toolkit and `--gpus all`; the same
-`DEVICE=auto` logic will then select CUDA.
+In CMD:
 
-For the published public Hub artifact, omit the local mount and pass the
-fine-tuned repository ID with its verified immutable revision:
-
-```bash
-docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MODEL_ID=retaj249/imdb-deberta-v3-sentiment \
-  -e HF_REVISION=0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e \
-  -v hf-cache:/home/app/.cache/huggingface \
-  imdb-sentiment-api
+```bat
+curl.exe -X POST http://localhost:8080/predict -H "Content-Type: application/json" -d "{\"text\":\"A thoughtful, beautifully acted film.\"}"
 ```
 
-For a private repository, export `HF_TOKEN` in the host shell and add
-`-e HF_TOKEN` to that command; never bake the token into the image.
+Verify all bundled model files against the bundled manifest:
 
-Docker Compose defaults to mounting `./model`:
-
-```bash
-docker compose up --build
+```console
+docker compose exec api python scripts/download_model.py --manifest /opt/model/manifest.json --output /opt/model --verify-only
 ```
 
-Compose binds to localhost by default. For an internet-facing deployment, put
-the service behind managed ingress that provides TLS, authentication where
-appropriate, and per-client rate limits/quotas. The in-process semaphore is
-backpressure, not a substitute for ingress abuse controls.
+Stop with `docker compose down`. Start again with
+`docker compose up -d --wait`; the model is already in the image. To change the
+host port, create `.env` containing `PORT=8081`, then rerun the start command.
+Only `127.0.0.1` is published by default.
 
-The provided Compose file intentionally defaults to the local `./model` mount.
-Use the `docker run` command above for the published Hub artifact, or provide a
-Compose override that removes the local model volume and sets `MODEL_PATH` to an
-empty container value alongside `MODEL_ID` and the immutable `HF_REVISION`.
+### Share the complete image for offline inference
+
+After building, export the image, including all weights and dependencies:
+
+```console
+docker image save -o imdb-sentiment-api.tar imdb-sentiment-api:1.1.0
+```
+
+Transfer the file to another machine with Docker using Linux containers and
+the same CPU architecture. Import it once:
+
+```console
+docker image load -i imdb-sentiment-api.tar
+```
+
+Then run with one command in either PowerShell or CMD, without the repository,
+Python installation, Hugging Face access, or model mounts:
+
+```console
+docker run -d --name imdb-sentiment -p 127.0.0.1:8080:8000 imdb-sentiment-api:1.1.0
+```
+
+Wait for `docker inspect --format "{{.State.Health.Status}}" imdb-sentiment` to
+report `healthy`, then open <http://localhost:8080/docs>. The image is built
+locally; this repository does not publish a public container registry image.
+
+### Optional CUDA build
+
+The default image uses official CPU-only PyTorch wheels. CUDA requires a
+compatible GPU, NVIDIA Container Toolkit, and a suitable PyTorch wheel:
+
+```console
+docker build -t imdb-sentiment-api:cuda --build-arg TORCH_INDEX_URL=https://pypi.org/simple --build-arg TORCH_VERSION=2.13.0 .
+docker run --rm --gpus all -e DEVICE=auto -p 127.0.0.1:8080:8000 imdb-sentiment-api:cuda
+```
+
+The default Compose service targets CPU. For a public deployment, configure
+managed HTTPS ingress, authentication where appropriate, and request quotas.
+The in-process semaphore provides backpressure rather than ingress controls.
 
 ## Tests and quality gates
 

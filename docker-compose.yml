@@ -1,14 +1,17 @@
+name: imdb-sentiment
+
 services:
   api:
     build:
       context: .
-    image: imdb-sentiment-api:latest
+    image: imdb-sentiment-api:1.1.0
     ports:
-      - "127.0.0.1:${PORT:-8000}:8000"
+      - "127.0.0.1:${PORT:-8080}:8000"
     environment:
-      MODEL_PATH: "${MODEL_PATH-/app/model}"
-      MODEL_ID: "${MODEL_ID-}"
-      DEVICE: "${DEVICE:-auto}"
+      MODEL_PATH: /opt/model
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      DEVICE: "${DEVICE:-cpu}"
       MAX_LENGTH: "${MAX_LENGTH-}"
       DECISION_THRESHOLD: "${DECISION_THRESHOLD-}"
       INFERENCE_BATCH_SIZE: "${INFERENCE_BATCH_SIZE-}"
@@ -16,14 +19,8 @@ services:
       MAX_TEXT_CHARS: "${MAX_TEXT_CHARS:-100000}"
       MAX_REQUEST_BYTES: "${MAX_REQUEST_BYTES:-4194304}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
-      HF_REVISION: "${HF_REVISION-}"
-      HF_TOKEN: "${HF_TOKEN-}"
-      HF_HOME: /home/app/.cache/huggingface
       MAX_CONCURRENT_INFERENCES: "${MAX_CONCURRENT_INFERENCES:-1}"
       INFERENCE_QUEUE_TIMEOUT_SECONDS: "${INFERENCE_QUEUE_TIMEOUT_SECONDS:-5}"
-    volumes:
-      - "${LOCAL_MODEL_DIR:-./model}:/app/model:ro"
-      - hf-cache:/home/app/.cache/huggingface
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -35,6 +32,3 @@ services:
     pids_limit: 256
     mem_limit: 4g
     cpus: 2.0
-
-volumes:
-  hf-cache:

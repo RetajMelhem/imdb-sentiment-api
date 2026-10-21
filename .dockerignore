@@ -11,7 +11,8 @@ __pycache__
 htmlcov
 .env
 .cache
-model
+model/*
+!model/manifest.json
 models
 checkpoints
 notebooks
