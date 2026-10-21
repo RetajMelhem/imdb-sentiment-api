@@ -12,8 +12,8 @@ FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3
 LABEL org.opencontainers.image.source="https://github.com/RetajMelhem/imdb-sentiment-api" \
     org.opencontainers.image.version="1.1.0"
 
-ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
-ARG TORCH_VERSION=2.13.0+cpu
+ARG TORCH_INDEX_URL=https://pypi.org/simple
+ARG TORCH_VERSION=2.13.0
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,6 +22,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1 \
     MODEL_PATH=/opt/model \
+    DEVICE=auto \
     PYTHONPATH=/app/src
 
 WORKDIR /app
@@ -29,10 +30,10 @@ WORKDIR /app
 RUN groupadd --system app && \
     useradd --system --gid app --create-home --home-dir /home/app app
 
-COPY requirements-docker.txt ./
+COPY requirements-docker.txt requirements-cuda.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --upgrade pip==26.2.2 && \
-    python -m pip install --index-url "${TORCH_INDEX_URL}" "torch==${TORCH_VERSION}" && \
+    python -m pip install --no-cache-dir --index-url "${TORCH_INDEX_URL}" -c requirements-docker.txt -c requirements-cuda.txt "torch==${TORCH_VERSION}" && \
     python -m pip install -r requirements-docker.txt
 
 COPY pyproject.toml README.md model_metadata.json ./

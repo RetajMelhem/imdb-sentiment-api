@@ -38,7 +38,9 @@ jobs:
           ruff format --check .
 
       - name: Audit Python dependencies
-        run: pip-audit
+        run: |
+          pip-audit
+          pip-audit --no-deps --disable-pip -r requirements-cuda.txt
 
       - name: Run unit and API tests with coverage
         run: pytest -m "not integration" --cov=sentiment --cov=app --cov-report=term-missing --cov-fail-under=80

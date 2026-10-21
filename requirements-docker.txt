@@ -1,5 +1,5 @@
 # Linux/Python 3.12 runtime snapshot for the portable release.
-# PyTorch is installed separately from the official CPU wheel index.
+# PyTorch is installed separately; CUDA pins are in requirements-cuda.txt.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1

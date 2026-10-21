@@ -11,7 +11,7 @@ services:
       MODEL_PATH: /opt/model
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
-      DEVICE: "${DEVICE:-cpu}"
+      DEVICE: "${DEVICE:-auto}"
       MAX_LENGTH: "${MAX_LENGTH-}"
       DECISION_THRESHOLD: "${DECISION_THRESHOLD-}"
       INFERENCE_BATCH_SIZE: "${INFERENCE_BATCH_SIZE-}"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 import pytest
+import torch
 from conftest import FakeModel
 
 from sentiment.config import Settings, load_metadata
@@ -40,6 +41,45 @@ def test_initialization_moves_and_evaluates_model_once(
     assert fake_model.device_moves == ["cpu"]
     assert fake_model.eval_calls == 1
     assert fake_model.forward_calls == 2
+
+
+@pytest.mark.parametrize("available, expected", [(True, "cuda"), (False, "cpu")])
+def test_auto_prioritizes_available_gpu(
+    metadata_path, fake_tokenizer, fake_model, monkeypatch, available, expected
+) -> None:
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: available)
+    predictor = SentimentPredictor(
+        Settings(_env_file=None, device="auto"),
+        load_metadata(metadata_path),
+        tokenizer=fake_tokenizer,
+        model=fake_model,
+    )
+    assert predictor.device == expected
+    assert fake_model.device_moves == [expected]
+
+
+def test_auto_recovers_on_cpu_if_gpu_cannot_load_model(
+    metadata_path, fake_tokenizer, monkeypatch
+) -> None:
+    class BusyGPUModel(FakeModel):
+        def to(self, device):
+            self.device_moves.append(str(device))
+            if device.type == "cuda":
+                raise RuntimeError("CUDA out of memory")
+            return self
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    model = BusyGPUModel()
+    predictor = SentimentPredictor(
+        Settings(_env_file=None, device="auto"),
+        load_metadata(metadata_path),
+        tokenizer=fake_tokenizer,
+        model=model,
+    )
+    assert model.device_moves == ["cuda", "cpu"]
+    assert predictor.device == "cpu"
+    assert predictor.predict("A good movie.").label in {"positive", "negative"}
 
 
 def test_initialization_accepts_native_backend_when_token_contract_matches(

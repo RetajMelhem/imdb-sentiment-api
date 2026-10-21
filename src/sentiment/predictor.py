@@ -42,7 +42,16 @@ class SentimentPredictor:
         self.tokenizer = tokenizer
         self.model = model
         self._validate_artifacts()
-        self.model.to(self._torch_device)
+        try:
+            self.model.to(self._torch_device)
+        except RuntimeError:
+            if self.settings.device != "auto" or self._torch_device.type != "cuda":
+                raise
+            LOGGER.warning("GPU initialization failed; loading model on CPU/RAM.")
+            self._torch_device = torch.device("cpu")
+            self.device = "cpu"
+            self.model.to(self._torch_device)
+            torch.cuda.empty_cache()
         self.model.eval()
         LOGGER.info("Model initialized on device=%s", self.device)
 

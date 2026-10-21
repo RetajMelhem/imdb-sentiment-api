@@ -1,57 +1,59 @@
-# v1.1.0 - Portable model and Docker release
+# v1.1.0 - GPU-first portable model and Docker release
 
-The Docker image includes the real fine-tuned IMDB DeBERTa model, tokenizer,
-audited metadata, and a checksum manifest. A fresh source checkout can build and
-start with one command in PowerShell or CMD:
+The image includes the actual fine-tuned IMDB DeBERTa model, tokenizer, audited
+metadata, CUDA runtime, and checksum manifest. GPU is the priority; when no
+usable NVIDIA GPU is available, the same model loads on CPU and system RAM.
+`/health` reports the actual device.
+
+## One command from PowerShell or CMD
+
+From a source checkout with Docker Desktop running Linux containers:
 
 ```console
-docker compose up --build -d --wait
-```
-
-Open <http://localhost:8080/docs> to enter reviews and test predictions.
-The first source build requires internet access. Inference uses the bundled
-model and does not need a model download, token, host Python, or GPU.
-
-## Windows release bundle
-
-Download `imdb-sentiment-api-v1.1.0-windows-amd64.zip` from this release and
-extract the complete ZIP. With Docker Desktop running Linux containers, run:
-
-PowerShell:
-
-```powershell
 .\start.cmd
 ```
 
-CMD:
+The source launcher builds the image and probes GPU access through Docker.
+The first build requires internet. Windows GPU support requires the WSL 2
+backend and a compatible NVIDIA driver. CPU fallback works without a GPU.
 
-```bat
-start.cmd
+## Windows release starter
+
+Download `imdb-sentiment-api-v1.1.0-windows-amd64.zip`, extract it, and run:
+
+```console
+.\start.cmd
 ```
 
-The launcher checks the archive SHA-256, imports the image when needed, and
-waits until the API is healthy. The bundle supports offline inference after
-download and includes `release.json`, `model-manifest.json`, and checksums.
-Use `PORT=8081` in a `.env` file if port 8080 is occupied.
-Inference and direct HTTP requests work offline. The interactive `/docs` page
-uses CDN-hosted Swagger UI assets, so its first uncached browser visit needs
-internet access.
+The starter downloads the `.tar.partNNN` assets, verifies each part and the
+complete archive SHA-256, streams the image into Docker, probes GPU support,
+starts the API, and waits for health. Each image part is under GitHub's per-file
+size limit. No host Python, Git, Hugging Face token, or separate model setup is
+needed. Allow several GB of downloads, about 20 GB free disk, and at least 4 GB
+available Docker memory.
 
-## Model provenance and requirements
+For offline installation, download all `.tar.partNNN` assets into the extracted
+starter folder before running the same command. Subsequent starts reuse the
+installed image. Inference requires no internet. The interactive `/docs` page
+uses CDN-hosted Swagger assets; its first uncached browser visit needs internet.
+
+Open <http://localhost:8080/docs> or use `curl.exe http://localhost:8080/health`.
+Set `PORT=8081` in `.env` if port 8080 is occupied. `DEVICE=cpu` forces CPU.
+
+## Model provenance
 
 - Model: `retaj249/imdb-deberta-v3-sentiment`.
-- Immutable model revision: `0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e`.
+- Immutable revision: `0cadd57a4ea34183f3cd4f14f2902a06cf73ac5e`.
 - `model/manifest.json` records every artifact's filename, size, and SHA-256.
-- Weights match the training metadata hash
+- Weights match training hash
   `e84d203742335db3bef1e7ff1e4b04aeb5cf4811b06e132a10fd96a1ab747ddd`.
-- Linux/amd64 CPU image; the Windows launcher targets Windows x64 with Docker
-  Desktop. Allow at least 4 GB of available Docker memory and several GB of disk.
-- Model inference settings remain 384-token head-tail truncation, labels
+- The inference contract remains 384-token head-tail truncation, labels
   negative/positive, and positive threshold 0.477.
 
-The Python base image and runtime dependency versions are pinned. Docker runs
-as an unprivileged user; Compose uses a read-only filesystem and localhost port
-8080. Large model files stay out of Git and travel inside the release image.
+The Python base and runtime versions are pinned. The service runs as an
+unprivileged user with a read-only Compose filesystem and localhost port 8080.
+Large model files stay out of Git and are included in the release image.
 
-Validation details are recorded in `DOCKER_VALIDATION.md` in the source release.
-The original 25,000-example benchmark is not rerun as part of release packaging.
+See `DOCKER_VALIDATION.md` in the source release for measured GPU/CPU checks
+and remaining limits. The original 25,000-example benchmark is not rerun for
+release packaging.

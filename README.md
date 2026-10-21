@@ -22,23 +22,26 @@ git clone https://github.com/RetajMelhem/imdb-sentiment-api.git
 cd imdb-sentiment-api
 ```
 
-Start the API, including the real fine-tuned model:
+Start the API, including the real fine-tuned model (PowerShell or CMD):
 
 ```console
-docker compose up --build -d --wait
+.\start.cmd
 ```
 
 Open **<http://localhost:8080/docs>** to enter reviews and try predictions.
-The first build needs internet access for Python packages and about 749 MB of
-model files. Allow several minutes and at least 4 GB of available Docker memory
-plus several GB of disk space. No host Python, GPU, Hugging Face token, `.env`
-file, or separately downloaded model folder is needed. Runtime inference uses
-CPU and local model files. See [Docker](#docker) for checks and image sharing.
+The launcher builds the CUDA-capable image, probes GPU access through Docker,
+and prioritizes an available NVIDIA GPU. Otherwise the model loads on CPU and
+system RAM. `/health` reports the selected device. The first build needs internet
+for Python/CUDA packages and about 749 MB of model files. Allow several minutes,
+at least 4 GB available Docker memory, and about 20 GB free disk for building.
+No host Python, Hugging Face token, `.env`, or separate model download is needed.
 
 For the Windows release ZIP, extract the complete bundle and run `start.cmd`
 from CMD or `.\start.cmd` from PowerShell. The launcher imports the included
-Docker image, starts the API, and waits for health. This path also works offline
-after downloading the release. See [release notes](RELEASE_NOTES.md).
+Docker image, starts the API, and waits for health. The starter ZIP downloads
+checksum-verified image parts on first use. For an offline install, download all
+`.tar.partNNN` assets beside the extracted launcher first.
+See [release notes](RELEASE_NOTES.md).
 
 ## Highlights
 
@@ -384,13 +387,14 @@ an unprivileged user, and Compose uses a read-only filesystem with no model
 mounts or cache volumes. Hugging Face and Transformers use offline mode at
 runtime. During the build, Docker downloads the pinned public Hub snapshot and
 checks every file's size and SHA-256.
-The Python base image is pinned by digest, and runtime Python dependencies are
-pinned in `requirements-docker.txt`; PyTorch uses the explicit official CPU wheel.
+The Python base image is pinned by digest. Runtime versions are pinned in
+`requirements-docker.txt` and `requirements-cuda.txt`; the default Torch build
+supports CUDA and CPU execution.
 
 These commands work in both **PowerShell and CMD**, from the repository root:
 
 ```console
-docker compose up --build -d --wait
+.\start.cmd
 docker compose ps
 curl.exe http://localhost:8080/health
 docker compose logs --tail 50 api
@@ -416,7 +420,8 @@ docker compose exec api python scripts/download_model.py --manifest /opt/model/m
 ```
 
 Stop with `docker compose down`. Start again with
-`docker compose up -d --wait`; the model is already in the image. To change the
+`.\start.cmd`; the existing image is reused and GPU access is checked again.
+After editing source code, run `.\start.cmd -Rebuild` to rebuild the image. To change the
 host port, create `.env` containing `PORT=8081`, then rerun the start command.
 Only `127.0.0.1` is published by default.
 
@@ -439,24 +444,35 @@ Then run with one command in either PowerShell or CMD, without the repository,
 Python installation, Hugging Face access, or model mounts:
 
 ```console
-docker run -d --name imdb-sentiment -p 127.0.0.1:8080:8000 imdb-sentiment-api:1.1.0
+docker run -d --gpus all --name imdb-sentiment -p 127.0.0.1:8080:8000 imdb-sentiment-api:1.1.0
 ```
+
+For automatic GPU detection and CPU fallback, use the Windows starter. For
+manual CPU execution, omit `--gpus all` from the command above.
 
 Wait for `docker inspect --format "{{.State.Health.Status}}" imdb-sentiment` to
 report `healthy`, then open <http://localhost:8080/docs>. The image is built
 locally; this repository does not publish a public container registry image.
 
-### Optional CUDA build
+### GPU priority and CPU fallback
 
-The default image uses official CPU-only PyTorch wheels. CUDA requires a
-compatible GPU, NVIDIA Container Toolkit, and a suitable PyTorch wheel:
+The default image is CUDA-capable. The launcher automatically uses
+`docker-compose.gpu.yml` when its CUDA probe succeeds. Windows GPU passthrough
+requires Docker Desktop's WSL 2 backend and a compatible NVIDIA driver.
+To select the Compose path manually:
 
 ```console
-docker build -t imdb-sentiment-api:cuda --build-arg TORCH_INDEX_URL=https://pypi.org/simple --build-arg TORCH_VERSION=2.13.0 .
-docker run --rm --gpus all -e DEVICE=auto -p 127.0.0.1:8080:8000 imdb-sentiment-api:cuda
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build -d --wait
 ```
 
-The default Compose service targets CPU. For a public deployment, configure
+Without the GPU override, `docker compose up --build -d --wait` runs the same
+image on CPU/RAM. `DEVICE=auto` prioritizes exposed CUDA devices; an auto-mode
+GPU initialization failure also falls back to CPU/RAM. `DEVICE=cpu` forces CPU.
+A smaller CPU-only image can be built with
+`--build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu` and
+`--build-arg TORCH_VERSION=2.13.0+cpu`; that image cannot use a GPU.
+
+For a public deployment, configure
 managed HTTPS ingress, authentication where appropriate, and request quotas.
 The in-process semaphore provides backpressure rather than ingress controls.
 
