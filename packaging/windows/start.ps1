@@ -52,8 +52,18 @@ try {
             throw "Missing image archive: $($release.archive). Extract the complete ZIP."
         }
         Write-Host 'Verifying the bundled image archive...'
-        $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
-        if ($actualHash.ToLowerInvariant() -ne $release.archive_sha256) {
+        $hashAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+        $archiveStream = [System.IO.File]::OpenRead($archivePath)
+        try {
+            $actualHash = ([System.BitConverter]::ToString(
+                $hashAlgorithm.ComputeHash($archiveStream)
+            )).Replace('-', '').ToLowerInvariant()
+        }
+        finally {
+            $archiveStream.Dispose()
+            $hashAlgorithm.Dispose()
+        }
+        if ($actualHash -ne $release.archive_sha256) {
             throw 'Image archive checksum mismatch. Download and extract the ZIP again.'
         }
         Write-Host 'Importing the model and API image into Docker...'

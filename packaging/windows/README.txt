@@ -14,6 +14,8 @@ release. The image includes the actual fine-tuned model and tokenizer.
 
 Open http://localhost:8080/docs and try /predict or /predict/batch.
 Health: curl.exe http://localhost:8080/health
+Offline prediction (CMD):
+curl.exe -X POST http://localhost:8080/predict -H "Content-Type: application/json" -d "{\"text\":\"Excellent movie.\"}"
 Logs:   docker compose -f compose.yaml logs --tail 50 api
 Stop:   docker compose -f compose.yaml down
 Restart: run start.cmd again.
@@ -28,6 +30,10 @@ supported; GPU and other CPU architectures were not validated for this bundle.
 model-manifest.json records the immutable Hugging Face source and per-file
 SHA-256 hashes. release.json records the image identity, archive checksum, and
 source commit. SHA256SUMS.txt contains checksums for the bundle's files.
+
+Inference and curl commands work offline. The interactive /docs page loads
+Swagger UI scripts/styles from a CDN and needs browser internet access on a
+first uncached visit.
 
 Source: https://github.com/RetajMelhem/imdb-sentiment-api
 Model:  https://huggingface.co/retaj249/imdb-deberta-v3-sentiment

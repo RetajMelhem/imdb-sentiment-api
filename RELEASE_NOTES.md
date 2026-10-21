@@ -33,6 +33,9 @@ The launcher checks the archive SHA-256, imports the image when needed, and
 waits until the API is healthy. The bundle supports offline inference after
 download and includes `release.json`, `model-manifest.json`, and checksums.
 Use `PORT=8081` in a `.env` file if port 8080 is occupied.
+Inference and direct HTTP requests work offline. The interactive `/docs` page
+uses CDN-hosted Swagger UI assets, so its first uncached browser visit needs
+internet access.
 
 ## Model provenance and requirements
 
