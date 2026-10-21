@@ -71,26 +71,50 @@ This establishes real GPU and CPU inference without Hub/network access.
 
 ## Windows portable archive and clean import
 
-The initial CPU image was exported with `docker image save`. The exporter compared the
-saved archive's layer identities and image configuration with the built image.
-Archive SHA-256 and source/model provenance are recorded in `release.json`;
-bundle and ZIP checksums are provided separately.
+The final CUDA/CPU image was exported as a Docker-compatible OCI archive,
+streamed directly from containerd to avoid an additional expanded export copy
+on this host's nearly full disk. It contains four archive parts totaling
+3,564,425,216 bytes. The packaging verifier compared the saved configuration
+and all layer identities with the built image. The complete archive SHA-256 is
+`b1bdc53095482bbe02a470ea3827d468c8fdc18c50c26a9dba70860aac15e9f9`.
+`release.json` records each part's size/hash, the configuration digest, layer
+identities, and source/model provenance; bundle and ZIP checksums are separate.
 
-The extracted Windows launcher was exercised through `start.cmd`, including
+The Windows release launcher was exercised through `start.cmd`, including
 Windows PowerShell 5.1, from this checkout's path containing spaces and Arabic
 characters. The archive checksum uses .NET directly, so it does not depend on
 PowerShell module search paths.
 
 A disposable Docker-in-Docker 29.8.0 engine initially had no images or volumes.
-The launcher verified and imported the complete image archive, used
-`--no-build --pull never`, started Compose, and waited for health. The cold
-service had no mounts or model cache volumes. Its real single prediction and
-nine-review batch passed, and rerunning the launcher reused the installed
-image successfully.
+The launcher verified all four local parts and the complete archive, streamed
+them into Docker, and confirmed the imported layer identities. This engine
+had no GPU access: the automatic probe failed and the launcher selected CPU
+and system RAM. Compose used `--no-build --pull never`, started the API, and
+waited for health. `/health` reported `model_loaded: true`, `device: cpu`.
 
-Those clean-import checks describe the initial CPU package. The final release
-now uses the CUDA-capable image and verified multipart export; its clean-import
-results are recorded after the final archive test below.
+The imported service ran as UID 999 with a read-only filesystem, no mounts,
+no model cache volumes, and no GPU device requests. All nine embedded model
+files passed size/SHA-256 verification. Real positive and negative reviews
+produced the expected labels; a nine-review batch returned nine predictions
+with single/batch parity within 0.000001, and empty input returned HTTP 422.
+Rerunning the same Windows launcher reused the installed image and returned
+health successfully without another import or download. This final multipart
+test supplements the earlier CPU package clean-import checks.
+
+The offline/local-part installation path was tested. Public GitHub downloads
+cannot be tested before publication; the uploaded draft assets' sizes and
+GitHub SHA-256 digests match all four local archive parts. Docker Desktop's
+Windows engine connection stalled after the earlier disk-full export; direct
+WSL engine access was used for export. The clean import used the Windows
+Docker CLI against the disposable engine. Restarting Docker Desktop with a
+fresh WSL kernel restored its normal Windows connection.
+
+The same four-part release was then imported into Docker Desktop through its
+normal Windows connection. The release `start.cmd` detected the RTX 3060,
+enabled the GPU override, and returned healthy with `device: cuda`. The root
+source `start.cmd` also reused that imported image successfully. A real
+positive API prediction passed after restoration. The local GPU service was
+left running at port 8080, and the disposable engine and its volume were removed.
 
 ## Limits
 
